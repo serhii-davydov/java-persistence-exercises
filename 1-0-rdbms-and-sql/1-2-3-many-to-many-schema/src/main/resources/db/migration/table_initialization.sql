@@ -46,9 +46,9 @@ create table sales_group
 
 create table broker_sales_group
 (
-    broker_id     bigint,
-    sales_group_id bigint,
+    broker_id     bigint not null ,
+    sales_group_id bigint not null ,
     constraint PK_broker_sales_group primary key (broker_id, sales_group_id),
-    constraint FK_broker_sales_group_broker foreign key (broker_id) references broker(id),
-    constraint FK_broker_sales_group_sales_group foreign key (sales_group_id) references sales_group(id)
+    constraint FK_broker_sales_group_broker foreign key (broker_id) references broker,
+    constraint FK_broker_sales_group_sales_group foreign key (sales_group_id) references sales_group
 );
