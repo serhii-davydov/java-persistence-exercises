@@ -6,6 +6,7 @@ import org.hibernate.Session;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
 import java.util.Collection;
 import java.util.function.Function;
 
@@ -32,6 +33,19 @@ public class QueryHelper {
      * @return query result specified by type T
      */
     public <T> T readWithinTx(Function<EntityManager, T> entityManagerConsumer) {
-        throw new ExerciseNotCompletedException(); // todo:
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        entityManager.unwrap(Session.class).setDefaultReadOnly(true);
+        EntityTransaction transaction = entityManager.getTransaction();
+        transaction.begin();
+        try {
+            T result = entityManagerConsumer.apply(entityManager);
+            entityManager.getTransaction().commit();
+            return result;
+        } catch (Exception e) {
+            transaction.rollback();
+            throw new QueryHelperException("Error performing query. Transaction is rolled back", e);
+        } finally {
+            entityManager.close();
+        }
     }
 }
