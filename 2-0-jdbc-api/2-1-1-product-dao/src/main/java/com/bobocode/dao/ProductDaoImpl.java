@@ -3,6 +3,7 @@ package com.bobocode.dao;
 import com.bobocode.exception.DaoOperationException;
 import com.bobocode.model.Product;
 import com.bobocode.util.ExerciseNotCompletedException;
+
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Date;
@@ -42,7 +43,7 @@ public class ProductDaoImpl implements ProductDao {
                 product.setId(generatedKeys.getLong(1));
             }
         } catch (Exception e) {
-            throw new DaoOperationException(e.getMessage());
+            throw new DaoOperationException("Error saving product: " + product.toString());
         }
     }
 
@@ -54,17 +55,13 @@ public class ProductDaoImpl implements ProductDao {
             ResultSet resultSet = statement.executeQuery(query);
             List<Product> products = new ArrayList<>();
             while (resultSet.next()) {
-                Long id = resultSet.getLong("id");
+                Long productId = resultSet.getLong("id");
                 String name = resultSet.getString("name");
                 String producer = resultSet.getString("producer");
                 BigDecimal price = resultSet.getBigDecimal("price");
-                LocalDate date =
-                        LocalDate.ofInstant(resultSet.getDate("expiration_date").toInstant(),
-                                ZoneId.systemDefault());
-                LocalDateTime time =
-                        LocalDateTime.ofInstant(resultSet.getDate("creation_time").toInstant(),
-                                ZoneId.systemDefault());
-                Product product = new Product(id, name, producer, price, date, time);
+                LocalDate date = resultSet.getDate("expiration_date").toLocalDate();
+                LocalDateTime time =resultSet.getTimestamp("creation_time").toLocalDateTime();
+                Product product = new Product(productId, name, producer, price, date, time);
                 products.add(product);
             }
             return products;
@@ -75,17 +72,55 @@ public class ProductDaoImpl implements ProductDao {
 
     @Override
     public Product findOne(Long id) {
-        throw new ExerciseNotCompletedException();// todo
+        try (Connection connection = dataSource.getConnection()) {
+            String query = "SELECT * FROM products WHERE id = ?;";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setLong(1, id);
+            ResultSet resultSet = statement.executeQuery();
+            Product product = null;
+            if (resultSet.next()) {
+                Long productId = resultSet.getLong("id");
+                String name = resultSet.getString("name");
+                String producer = resultSet.getString("producer");
+                BigDecimal price = resultSet.getBigDecimal("price");
+                LocalDate date = resultSet.getDate("expiration_date").toLocalDate();
+                LocalDateTime time =resultSet.getTimestamp("creation_time").toLocalDateTime();
+                product = new Product(productId, name, producer, price, date, time);
+                return product;
+            } else {
+                throw new DaoOperationException("Can't find product by id: " + id);
+            }
+        } catch (Exception e) {
+            throw new DaoOperationException("Can't find product by id: " + id);
+        }
     }
 
     @Override
     public void update(Product product) {
-        throw new ExerciseNotCompletedException();// todo
+        try (Connection connection = dataSource.getConnection()) {
+            String query = "UPDATE products SET name = ?, producer = ?, price = ?, expiration_date = ? WHERE id = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, product.getName());
+            statement.setString(2, product.getProducer());
+            statement.setBigDecimal(3, product.getPrice());
+            statement.setDate(4, Date.valueOf(product.getExpirationDate()));
+            statement.setLong(5, product.getId());
+            statement.executeUpdate();
+        } catch (Exception e) {
+            throw new DaoOperationException("Can't update product: " + product.toString());
+        }
     }
 
     @Override
     public void remove(Product product) {
-        throw new ExerciseNotCompletedException();// todo
+        try (Connection connection = dataSource.getConnection()) {
+            String query = "DELETE FROM products WHERE id = ?";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setLong(1, product.getId());
+            statement.executeUpdate();
+        } catch (Exception e) {
+            throw new DaoOperationException("Can't remove product: " + product.toString());
+        }
     }
 
 }
